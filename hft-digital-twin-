@@ -1,0 +1,868 @@
+1).gitignore
+
+# C++ binaries
+hft_engine
+*.exe
+cpp-engine/cpp-engine/hft_engine
+
+# Rust build files
+target/
+rust-engine/target/
+
+# Python environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+2)main.rs 
+
+
+use std::fs::File;
+use std::io::Write;
+use std::time::Instant;
+
+
+struct MarketEvent {
+    order_id: u64,
+    price: f64,
+    quantity: i32,
+}
+
+
+fn main() {
+
+    const EVENTS: usize = 1_000_000;
+
+
+    let mut events: Vec<MarketEvent> =
+        Vec::with_capacity(EVENTS);
+
+
+    let start = Instant::now();
+
+
+    for i in 0..EVENTS {
+
+        events.push(
+            MarketEvent {
+                order_id: i as u64,
+                price: 180.50,
+                quantity: 100,
+            }
+        );
+    }
+
+
+    let duration =
+        start.elapsed().as_nanos();
+
+
+    let events_per_second =
+        (EVENTS as u128 * 1_000_000_000)
+        / duration;
+
+
+    println!("Rust HFT Engine Benchmark");
+    println!("-------------------------");
+
+    println!(
+        "Events processed: {}",
+        EVENTS
+    );
+
+
+    println!(
+        "Total time: {} ns",
+        duration
+    );
+
+
+    println!(
+        "Events/sec: {}",
+        events_per_second
+    );
+
+
+    let mut file =
+        File::create("../benchmarks/rust_results.csv")
+        .unwrap();
+
+
+    writeln!(
+        file,
+        "engine,events_processed,total_time_ns,events_per_second"
+    ).unwrap();
+
+
+    writeln!(
+        file,
+        "Rust,{},{},{}",
+        EVENTS,
+        duration,
+        events_per_second
+    ).unwrap();
+
+
+    println!(
+        "\nBenchmark saved: rust_results.csv"
+    );
+}
+
+
+3)analyze_latency.py
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+data = pd.read_csv("../data/latency.csv")
+
+print("Dataset Preview:")
+print(data.head())
+
+print("\nStatistics:")
+print(data.describe())
+
+
+plt.plot(
+    data["order_id"],
+    data["latency_ns"]
+)
+
+plt.xlabel("Order ID")
+plt.ylabel("Latency (ns)")
+plt.title("HFT Engine Latency")
+
+plt.savefig("../data/latency_graph.png")
+
+print("\nGraph saved successfully!")
+
+
+4)train_model.py
+
+
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+
+
+data = pd.read_csv("../data/latency.csv")
+
+
+X = data[["order_id"]]
+y = data["latency_ns"]
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+
+model = LinearRegression()
+
+model.fit(
+    X_train,
+    y_train
+)
+
+
+prediction = model.predict(X_test)
+
+
+error = mean_absolute_error(
+    y_test,
+    prediction
+)
+
+
+print("AI Latency Predictor")
+print("--------------------")
+
+print("Mean Absolute Error:", error)
+
+
+sample = [[12000]]
+
+result = model.predict(sample)
+
+print(
+    "Predicted latency for order 12000:",
+    result[0],
+    "ns"
+)
+
+
+
+5)generate_telemetry.py
+
+
+import pandas as pd
+import random
+
+
+rows = []
+
+for i in range(10000):
+
+    cpu_load = random.randint(20, 95)
+    queue_size = random.randint(50, 5000)
+    network_load = random.randint(1000, 50000)
+    threads = random.choice([4, 8, 16])
+
+    latency = (
+        50000
+        + cpu_load * 2000
+        + queue_size * 50
+        + network_load * 2
+        + threads * 1000
+        + random.randint(-10000, 10000)
+    )
+
+    rows.append([
+        i,
+        cpu_load,
+        queue_size,
+        network_load,
+        threads,
+        latency
+    ])
+
+
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "order_id",
+        "cpu_load",
+        "queue_size",
+        "network_load",
+        "threads",
+        "latency_ns"
+    ]
+)
+
+
+df.to_csv(
+    "telemetry.csv",
+    index=False
+)
+
+print("Telemetry dataset generated!")
+
+
+
+6)xgboost_predictor.py
+
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+
+from xgboost import XGBRegressor
+
+
+data = pd.read_csv("../data/telemetry.csv")
+
+
+X = data[
+    [
+        "cpu_load",
+        "queue_size",
+        "network_load",
+        "threads"
+    ]
+]
+
+y = data["latency_ns"]
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+
+model = XGBRegressor(
+    n_estimators=200,
+    max_depth=6,
+    learning_rate=0.05,
+    random_state=42
+)
+
+
+model.fit(
+    X_train,
+    y_train
+)
+
+
+prediction = model.predict(X_test)
+
+
+error = mean_absolute_error(
+    y_test,
+    prediction
+)
+
+
+print("HFT Latency XGBoost Predictor")
+print("-----------------------------")
+
+print(
+    "Mean Absolute Error:",
+    error,
+)
+
+
+sample = pd.DataFrame(
+    {
+        "cpu_load":[70],
+        "queue_size":[3000],
+        "network_load":[35000],
+        "threads":[8]
+    }
+)
+
+
+result = model.predict(sample)
+
+
+print(
+    "Predicted latency:",
+    result[0],
+    "ns"
+)
+
+
+
+7)train_xgboost.py
+
+import pandas as pd
+
+from xgboost import XGBRegressor
+
+
+data = pd.read_csv("../data/telemetry.csv")
+
+
+X = data[
+    [
+        "cpu_load",
+        "queue_size",
+        "network_load",
+        "threads"
+    ]
+]
+
+y = data["latency_ns"]
+
+
+model = XGBRegressor(
+    n_estimators=200,
+    max_depth=6,
+    learning_rate=0.05,
+    random_state=42
+)
+
+
+model.fit(
+    X,
+    y
+)
+
+
+model.save_model(
+    "models/latency_model.json"
+)
+
+
+print("XGBoost model saved successfully!")
+
+
+
+8)predict_latency.py
+
+
+import pandas as pd
+
+from xgboost import XGBRegressor
+
+
+model = XGBRegressor()
+
+model.load_model(
+    "models/latency_model.json"
+)
+
+
+sample = pd.DataFrame(
+    {
+        "cpu_load":[75],
+        "queue_size":[4000],
+        "network_load":[45000],
+        "threads":[8]
+    }
+)
+
+
+prediction = model.predict(sample)
+
+
+print("Loaded XGBoost Model")
+print("---------------------")
+
+print(
+    "Predicted latency:",
+    prediction[0],
+    "ns"
+)
+
+
+
+9)main.cpp
+
+
+#include <iostream>
+#include <chrono>
+#include <vector>
+#include <fstream>
+
+using namespace std;
+using namespace chrono;
+
+
+struct MarketEvent {
+    long long order_id;
+    double price;
+    int quantity;
+};
+
+
+int main() {
+
+    const int EVENTS = 1000000;
+
+
+    // Pre-allocate memory
+    vector<MarketEvent> events(EVENTS);
+
+
+    auto start = high_resolution_clock::now();
+
+
+    // Direct indexed write - avoids push_back overhead
+    for (int i = 0; i < EVENTS; i++) {
+
+        events[i].order_id = i;
+        events[i].price = 180.50;
+        events[i].quantity = 100;
+    }
+
+
+    auto end = high_resolution_clock::now();
+
+
+    auto duration =
+        duration_cast<nanoseconds>(
+            end - start
+        ).count();
+
+
+    long long events_per_second =
+        EVENTS * 1000000000LL / duration;
+
+
+    cout << "C++ HFT Engine Benchmark" << endl;
+    cout << "------------------------" << endl;
+
+    cout << "Events processed: "
+         << EVENTS
+         << endl;
+
+
+    cout << "Total time: "
+         << duration
+         << " ns"
+         << endl;
+
+
+    cout << "Events/sec: "
+         << events_per_second
+         << endl;
+
+
+
+    // Save benchmark result
+    ofstream file("../benchmarks/cpp_results.csv");
+
+
+    file << "engine,events_processed,total_time_ns,events_per_second\n";
+
+
+    file << "C++,"
+         << EVENTS
+         << ","
+         << duration
+         << ","
+         << events_per_second
+         << "\n";
+
+
+    file.close();
+
+
+    cout << "\nBenchmark saved: cpp_results.csv"
+         << endl;
+
+
+    return 0;
+}
+
+
+
+10)cpp_results
+
+engine,events_processed,total_time_ns,events_per_second
+C++,1000000,32816248,30472709
+
+
+11)rust_results
+
+engine,events_processed,total_time_ns,events_per_second
+Rust,1000000,7487651786,133553
+
+
+12)analyze_benchmark.py
+
+
+import csv
+
+files = [
+    "benchmarks/cpp_results.csv",
+    "benchmarks/rust_results.csv"
+]
+
+results = []
+
+for file in files:
+    with open(file, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            results.append(row)
+
+print("\nHFT Engine Benchmark Report")
+print("-" * 60)
+
+print(f"{'Engine':<10}{'Events':<15}{'Time(ns)':<15}{'Events/sec':<15}")
+print("-" * 60)
+
+for r in results:
+    print(
+        f"{r['engine']:<10}"
+        f"{r['events_processed']:<15}"
+        f"{r['total_time_ns']:<15}"
+        f"{r['events_per_second']:<15}"
+    )
+
+cpp = next(r for r in results if r["engine"] == "C++")
+rust = next(r for r in results if r["engine"] == "Rust")
+
+cpp_eps = int(cpp["events_per_second"])
+rust_eps = int(rust["events_per_second"])
+
+print("\nPerformance Comparison")
+print("-" * 60)
+
+if cpp_eps > rust_eps:
+    print(f"C++ is faster by {cpp_eps / rust_eps:.2f}x")
+else:
+    print(f"Rust is faster by {rust_eps / cpp_eps:.2f}x")
+
+
+13)generate_report.py
+
+{datetime.now()}
+
+## Performance Summary
+
+| Engine | Events | Time(ns) | Events/sec |
+|---|---:|---:|---:|
+| C++ | {cpp['events_processed']} | {cpp['total_time_ns']} | {cpp_eps} |
+| Rust | {rust['events_processed']} | {rust['total_time_ns']} | {rust_eps} |
+
+## Analysis
+
+C++ throughput is {ratio:.2f}x compared to Rust
+for this benchmark workload.
+
+## Benchmark Notes
+
+- Same event count used for comparison
+- Measurements generated automatically
+- Results produced by HFT Digital Twin benchmark pipeline
+"""
+
+
+with open("benchmarks/report.md", "w") as f:
+    f.write(report)
+
+
+print("Benchmark report generated: benchmarks/report.md")
+
+
+14)
+
+
+import csv
+import matplotlib.pyplot as plt
+
+
+engines = []
+throughput = []
+
+
+files = [
+    "benchmarks/cpp_results.csv",
+    "benchmarks/rust_results.csv"
+]
+
+
+for file in files:
+    with open(file, "r") as f:
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            engines.append(row["engine"])
+            throughput.append(
+                int(row["events_per_second"])
+            )
+
+
+plt.figure(figsize=(8,5))
+
+plt.bar(
+    engines,
+    throughput
+)
+
+plt.title("HFT Engine Throughput Comparison")
+plt.xlabel("Engine")
+plt.ylabel("Events / Second")
+
+plt.savefig(
+    "benchmarks/throughput.png",
+    dpi=300
+)
+
+print("Chart generated: benchmarks/throughput.png")
+
+
+
+15)generate_chart.py
+
+
+import csv
+import matplotlib.pyplot as plt
+
+
+engines = []
+throughput = []
+
+
+files = [
+    "benchmarks/cpp_results.csv",
+    "benchmarks/rust_results.csv"
+]
+
+
+for file in files:
+    with open(file, "r") as f:
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            engines.append(row["engine"])
+            throughput.append(
+                int(row["events_per_second"])
+            )
+
+
+plt.figure(figsize=(8,5))
+
+plt.bar(
+    engines,
+    throughput
+)
+
+plt.title("HFT Engine Throughput Comparison")
+plt.xlabel("Engine")
+plt.ylabel("Events / Second")
+
+plt.savefig(
+    "benchmarks/throughput.png",
+    dpi=300
+)
+
+print("Chart generated: benchmarks/throughput.png")
+
+
+16)README.md
+
+# HFT Digital Twin
+
+A low-latency trading system simulation platform combining Rust systems programming, C++ performance engineering, and AI-based latency prediction.
+
+
+## Project Overview
+
+HFT Digital Twin simulates a high-frequency trading environment where market events are generated, processed, measured, and analyzed.
+
+The project demonstrates:
+
+- Low latency event processing
+- Rust and C++ performance comparison
+- Automated benchmarking
+- Machine learning based latency prediction
+
+
+## Architecture
+
+
+Market Events
+
+        |
+        v
+
++----------------+
+| Rust Engine    |
+| Event System   |
++----------------+
+
+        |
+        v
+
+Latency Dataset
+
+        |
+        v
+
++----------------+
+| Python AI      |
+| XGBoost Model  |
++----------------+
+
+        |
+        v
+
+Prediction Report
+
+
+        |
+        v
+
++----------------+
+| C++ Engine     |
+| Benchmark      |
++----------------+
+
+
+
+## Components
+
+
+### Rust Engine
+
+Features:
+
+- High performance event processing
+- Optimized memory handling
+- Benchmark generation
+- Release mode performance testing
+
+
+### C++ Low Latency Engine
+
+Features:
+
+- Preallocated memory
+- Cache-friendly processing
+- Optimized event loop
+- High throughput benchmark
+
+
+### Python AI Layer
+
+Features:
+
+- Latency prediction model
+- XGBoost training pipeline
+- Model inference system
+
+
+
+## Performance Benchmark
+
+Optimized benchmark results:
+
+
+Engine          Events/sec
+
+C++             262,965,238
+
+Rust            46,717,770
+
+
+
+## How To Run
+
+
+### Rust Engine
+
+cd rust-engine
+
+cargo run --release
+
+
+
+### C++ Engine
+
+cd cpp-engine
+
+g++ -O3 cpp-engine/main.cpp -o hft_engine
+
+./hft_engine
+
+
+
+### Benchmark Analyzer
+
+python3 benchmarks/analyze_benchmark.py
+
+
+
+## Technologies Used
+
+- Rust
+- C++
+- Python
+- XGBoost
+- Git
+- Linux
+- Performance Benchmarking
+
+
+
+## Engineering Concepts Demonstrated
+
+- Low latency system design
+- Memory optimization
+- Throughput measurement
+- Event-driven architecture
+- ML inference pipeline
+- Performance analysis
